@@ -14,14 +14,14 @@ export default Reflux.createStore({
 
   init() {
     this.tweenable = new Tweenable()
-    this.finder = new Pathfinding.BiDijkstraFinder({
+    this.finder = new Pathfinding.AStarFinder({
       allowDiagonal: false,
       dontCrossCorners: true
     })
     this.currentDirection = 'left'
     this.currentPosition = [1,1]
     this.isMoving = false
-    this.maxTilesPerSecond = 2
+    this.maxTilesPerSecond = 5
     this.listenTo(LevelStore, this.handleLevelChange, this.handleLevelChange)
   },
 
@@ -60,48 +60,50 @@ export default Reflux.createStore({
       tileIndex,
       this.level.clone()
     )
-    const distanceToWaypoint = []
-
-    const smoothedPath = Pathfinding.Util.smoothenPath(this.level.clone(), path)
-    smoothedPath.map((coordinates, index) => {
-      if (index + 1 === smoothedPath.length) {
-        return
-      }
-      const fromRow = smoothedPath[index][0]
-      const fromTile = smoothedPath[index + 1][0]
-      const toRow = smoothedPath[index + 0][1]
-      const toTile = smoothedPath[index + 1][1]
-      const distance = Math.abs((fromRow - fromTile) + (toRow - toTile))
-      distanceToWaypoint.push(distance)
-    })
-    let tween
-
-    distanceToWaypoint.map((distance, index) => {
-      const nextTween = {
-        from: { row: smoothedPath[index][0], tile: smoothedPath[index][1] },
-        to: { row: smoothedPath[index + 1][0], tile: smoothedPath[index + 1][1] },
-        delay: 1000,
-        duration: (distance * 1000) / this.maxTilesPerSecond,
-        easing: 'linear',
-        start: (state) => {
-          this.trigger(coordinatesFromGrid(this.tileSize, state.row, state.tile))
-        },
-        finish: (state) => {
-          this.currentPosition[0] = state.row
-          this.currentPosition[1] = state.tile
-          this.trigger(coordinatesFromGrid(this.tileSize, state.row, state.tile))
-        },
-        step: (state) => {
-          this.trigger(coordinatesFromGrid(this.tileSize, state.row, state.tile))
-        },
-      }
-      if (typeof tween === 'undefined') {
-        tween = this.tweenable.tween(nextTween)
-      }
-      else {
-        tween.tween(nextTween)
-      }
-    })
+    if (path.length > 0) {
+      const distanceToWaypoint = []
+      const smoothedPath = Pathfinding.Util.smoothenPath(this.level.clone(), path)
+      smoothedPath.map((coordinates, index) => {
+        if (index + 1 === smoothedPath.length) {
+          return
+        }
+        const fromRow = smoothedPath[index][0]
+        const fromTile = smoothedPath[index + 1][0]
+        const toRow = smoothedPath[index + 0][1]
+        const toTile = smoothedPath[index + 1][1]
+        const distance = Math.abs((fromRow - fromTile) + (toRow - toTile))
+        distanceToWaypoint.push(distance)
+      })
+      let tweens = []
+      console.log('anims:', distanceToWaypoint.length)
+      distanceToWaypoint.map((distance, index) => {
+        console.log('loop', index)
+        console.log('speed', (distance * 1000) / this.maxTilesPerSecond)
+        tweens.push({
+          from: { row: smoothedPath[index][0], tile: smoothedPath[index][1] },
+          to: { row: smoothedPath[index + 1][0], tile: smoothedPath[index + 1][1] },
+          duration: (distance * 1000) / this.maxTilesPerSecond,
+          easing: 'linear',
+          start: (state) => {
+            this.trigger(coordinatesFromGrid(this.tileSize, state.row, state.tile))
+          },
+          finish: (state) => {
+            this.currentPosition[0] = state.row
+            this.currentPosition[1] = state.tile
+            this.trigger(coordinatesFromGrid(this.tileSize, state.row, state.tile))
+            const next = index <= distanceToWaypoint.length ? index + 1 : distanceToWaypoint.length
+            if (next > index) {
+              this.tweenable.tween(tweens[next])
+            }
+            console.log('stopped at', state.row, state.tile)
+          },
+          step: (state) => {
+            this.trigger(coordinatesFromGrid(this.tileSize, state.row, state.tile))
+          },
+        })
+      })
+      this.tweenable.tween(tweens[0])
+    }
   },
 
   onSetTileSize(size: number) {

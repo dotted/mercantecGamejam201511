@@ -19671,13 +19671,15 @@
 	                    var callback;
 	                    if (isWalkable) {
 	                        callback = function () {
+	                            console.log('moving to', rowIndex, tileIndex);
 	                            movementActions_1["default"].moveToCoordinates(rowIndex, tileIndex);
 	                        };
 	                    }
-	                    tiles.push(React.createElement(tile_1["default"], {"key": "row" + rowIndex + "tile" + tileIndex, "sizePercent": tileSizePercent + "%", "isWalkable": isWalkable, "onPress": callback}));
+	                    tiles.push(React.createElement(tile_1["default"], {"key": "row" + rowIndex + "tile" + tileIndex, "title": "Row: " + rowIndex + ", Tile: " + tileIndex, "sizePercent": tileSizePercent + "%", "isWalkable": isWalkable, "onPress": callback}));
 	                });
 	            });
 	            return (React.createElement("div", {"style": {
+	                position: 'fixed',
 	                backgroundColor: '#aaa',
 	                width: '600px',
 	                height: '600px',
@@ -21129,7 +21131,7 @@
 	    render: function () {
 	        var fillColor = this.props.isWalkable ? '#fff' : '#000';
 	        var size = this.props.size || this.props.sizePercent;
-	        return (React.createElement("div", {"onClick": this.props.onPress, "key": this.props.key, "style": {
+	        return (React.createElement("div", {"onClick": this.props.onPress, "key": this.props.key, "title": this.props.title, "style": {
 	            cursor: this.props.onPress ? 'pointer' : undefined,
 	            backgroundColor: fillColor,
 	            width: size,
@@ -21257,14 +21259,14 @@
 	    listenables: [movementActions_1["default"]],
 	    init: function () {
 	        this.tweenable = new Tweenable();
-	        this.finder = new Pathfinding.BiDijkstraFinder({
+	        this.finder = new Pathfinding.AStarFinder({
 	            allowDiagonal: false,
 	            dontCrossCorners: true
 	        });
 	        this.currentDirection = 'left';
 	        this.currentPosition = [1, 1];
 	        this.isMoving = false;
-	        this.maxTilesPerSecond = 2;
+	        this.maxTilesPerSecond = 5;
 	        this.listenTo(levelStore_1["default"], this.handleLevelChange, this.handleLevelChange);
 	    },
 	    getInitialState: function () {
@@ -21294,46 +21296,50 @@
 	    onMoveToCoordinates: function (rowIndex, tileIndex) {
 	        var _this = this;
 	        var path = this.finder.findPath(this.currentPosition[0], this.currentPosition[1], rowIndex, tileIndex, this.level.clone());
-	        var distanceToWaypoint = [];
-	        var smoothedPath = Pathfinding.Util.smoothenPath(this.level.clone(), path);
-	        smoothedPath.map(function (coordinates, index) {
-	            if (index + 1 === smoothedPath.length) {
-	                return;
-	            }
-	            var fromRow = smoothedPath[index][0];
-	            var fromTile = smoothedPath[index + 1][0];
-	            var toRow = smoothedPath[index + 0][1];
-	            var toTile = smoothedPath[index + 1][1];
-	            var distance = Math.abs((fromRow - fromTile) + (toRow - toTile));
-	            distanceToWaypoint.push(distance);
-	        });
-	        var tween;
-	        distanceToWaypoint.map(function (distance, index) {
-	            var nextTween = {
-	                from: { row: smoothedPath[index][0], tile: smoothedPath[index][1] },
-	                to: { row: smoothedPath[index + 1][0], tile: smoothedPath[index + 1][1] },
-	                delay: 1000,
-	                duration: (distance * 1000) / _this.maxTilesPerSecond,
-	                easing: 'linear',
-	                start: function (state) {
-	                    _this.trigger(position_1.coordinatesFromGrid(_this.tileSize, state.row, state.tile));
-	                },
-	                finish: function (state) {
-	                    _this.currentPosition[0] = state.row;
-	                    _this.currentPosition[1] = state.tile;
-	                    _this.trigger(position_1.coordinatesFromGrid(_this.tileSize, state.row, state.tile));
-	                },
-	                step: function (state) {
-	                    _this.trigger(position_1.coordinatesFromGrid(_this.tileSize, state.row, state.tile));
+	        if (path.length > 0) {
+	            var distanceToWaypoint = [];
+	            var smoothedPath = Pathfinding.Util.smoothenPath(this.level.clone(), path);
+	            smoothedPath.map(function (coordinates, index) {
+	                if (index + 1 === smoothedPath.length) {
+	                    return;
 	                }
-	            };
-	            if (typeof tween === 'undefined') {
-	                tween = _this.tweenable.tween(nextTween);
-	            }
-	            else {
-	                tween.tween(nextTween);
-	            }
-	        });
+	                var fromRow = smoothedPath[index][0];
+	                var fromTile = smoothedPath[index + 1][0];
+	                var toRow = smoothedPath[index + 0][1];
+	                var toTile = smoothedPath[index + 1][1];
+	                var distance = Math.abs((fromRow - fromTile) + (toRow - toTile));
+	                distanceToWaypoint.push(distance);
+	            });
+	            var tweens = [];
+	            console.log('anims:', distanceToWaypoint.length);
+	            distanceToWaypoint.map(function (distance, index) {
+	                console.log('loop', index);
+	                console.log('speed', (distance * 1000) / _this.maxTilesPerSecond);
+	                tweens.push({
+	                    from: { row: smoothedPath[index][0], tile: smoothedPath[index][1] },
+	                    to: { row: smoothedPath[index + 1][0], tile: smoothedPath[index + 1][1] },
+	                    duration: (distance * 1000) / _this.maxTilesPerSecond,
+	                    easing: 'linear',
+	                    start: function (state) {
+	                        _this.trigger(position_1.coordinatesFromGrid(_this.tileSize, state.row, state.tile));
+	                    },
+	                    finish: function (state) {
+	                        _this.currentPosition[0] = state.row;
+	                        _this.currentPosition[1] = state.tile;
+	                        _this.trigger(position_1.coordinatesFromGrid(_this.tileSize, state.row, state.tile));
+	                        var next = index <= distanceToWaypoint.length ? index + 1 : distanceToWaypoint.length;
+	                        if (next > index) {
+	                            _this.tweenable.tween(tweens[next]);
+	                        }
+	                        console.log('stopped at', state.row, state.tile);
+	                    },
+	                    step: function (state) {
+	                        _this.trigger(position_1.coordinatesFromGrid(_this.tileSize, state.row, state.tile));
+	                    }
+	                });
+	            });
+	            this.tweenable.tween(tweens[0]);
+	        }
 	    },
 	    onSetTileSize: function (size) {
 	        this.tileSize = size;
@@ -24296,6 +24302,7 @@
 	   * @chainable
 	   */
 	  Tweenable.prototype.tween = function (opt_config) {
+	    console.log('tween called')
 	    if (this._isTweening) {
 	      return this;
 	    }

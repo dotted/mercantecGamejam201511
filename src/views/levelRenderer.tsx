@@ -38,11 +38,12 @@ export default React.createClass<Props, State>({
           let callback
           if (isWalkable) {
             callback = () => {
-              //console.log('moving to', rowIndex, tileIndex)
+              console.log('moving to', rowIndex, tileIndex)
               movementActions.moveToCoordinates(rowIndex, tileIndex)
             }
           }
           tiles.push(<Tile key={`row${rowIndex}tile${tileIndex}`}
+                           title={`Row: ${rowIndex}, Tile: ${tileIndex}`}
                            sizePercent={`${tileSizePercent}%`}
                            isWalkable={isWalkable}
                            onPress={callback} />)
@@ -51,6 +52,7 @@ export default React.createClass<Props, State>({
       return (
         <div
           style={{
+            position: 'fixed',
             backgroundColor: '#aaa',
             width: '600px',
             height: '600px',
