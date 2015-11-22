@@ -1,0 +1,35 @@
+{
+  "name": "mercantecgamejam201511",
+  "version": "0.0.0",
+  "description": "From Mercantec Gamejam 2015-11-20/22",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dotted/mercantecGamejam201511.git"
+  },
+  "author": {
+    "name": "Bo Fjord Jensen",
+    "email": "bo@bxd.dk"
+  },
+  "license": "GPL-2.0",
+  "bugs": {
+    "url": "https://github.com/dotted/mercantecGamejam201511/issues"
+  },
+  "homepage": "https://github.com/dotted/mercantecGamejam201511#readme",
+  "dependencies": {
+    "pathfinding": "^0.4.17",
+    "react": "^0.14.3",
+    "react-dom": "^0.14.3",
+    "reflux": "^0.3.0",
+    "shifty": "^1.5.1",
+    "ts-loader": "^0.7.1",
+    "webpack": "^1.12.8"
+  },
+  "devDependencies": {
+    "imports-loader": "^0.6.5",
+    "typescript": "^1.6.2"
+  }
+}
